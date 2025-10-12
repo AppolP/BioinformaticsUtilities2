@@ -76,6 +76,7 @@ def filter_fastq(
     gc_bounds: tuples / int / float
     length_bounds: tuples / int / float
     quality_threshold: int
+    output_fastq: str
     Returns filtered fastq sequences in a user-specified directory. Saves results in the current directory by default 
     Raises the error in case reads are not correct nucleic acids
     """
@@ -89,24 +90,28 @@ def filter_fastq(
     else:
         len_left_bound, len_right_bound = length_bounds    
         
-    with open(os.path(input_fastq, 'r')) as raw_fastq, open(output_fastq, 'a'):
+    with open(input_fastq, 'r') as raw_fastq, open(output_fastq, 'w'):
         output_fastq.write(f"{input_fastq = }{{\n")
         
-        full_info_sequence = {}
-        while raw_fastq.readline().split() != '':
-            name = raw_fastq.readline().split(':')[0]
-            sequence = raw_fastq.readline().split()
+        skip_comma = True
+        while raw_fastq.readline().strip() != '':
+            name_line = raw_fastq.readline().strip(':')[0]
+            sequence = raw_fastq.readline().strip()
+            comment = raw_fastq.readline()
+            quality = raw_fastq.readline().strip()
+            
             if not is_nucleic_acid(sequence):
                 return 'Error: reads are not nucleic acids'
-            raw_fastq.readline()
-            quality = raw_fastq.readline().split()
-            full_info_sequence[name] = tuple(sequence, quality)
-            if is_in_bounds(full_info_sequence[name][0], gc_bounds, 'G', 'C') and 
-                is_qualified(full_info_sequence[name][1], quality_threshold) and 
-                len_left_bound <= len(full_info_sequence[name][0]) <= len_right_bound:
-                output_fastq.write(f"'{name}': ('{sequence}', '{quality}')\n")
+            name = name_line[1:] if name_line.startswith('@') else name_line
+            if is_in_bounds(sequence, gc_bounds, 'G', 'C') and 
+                is_qualified(quality, quality_threshold) and 
+                len_left_bound <= len(sequence) <= len_right_bound:
+                if not skip_comma:
+                    output_fastq.write(',\n')
+                output_fastq.write(f"'{name}': ('{sequence}', '{quality}')")
+                skip_comma = False
                 
-        output_fastq.write("}}")
+        output_fastq.write("/n}}")
        
     # for key in seqs:
     #     if not is_nucleic_acid(key):
