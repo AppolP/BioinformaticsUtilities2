@@ -63,32 +63,59 @@ def run_dna_rna_tools(*args: str) -> Union[str, list[str]]:
         
 
 def filter_fastq(
-    seqs: dict[str: str], 
+    input_fastq: str, 
     gc_bounds: Union[tuple[int, int], int, float] = (0, 100), 
     length_bounds: Union[tuple[int, int], int, float] = (0, 2**32), 
-    quality_threshold: int = 0
+    quality_threshold: int = 0,
+    output_fastq: str = 'filtered/filtered_fastq.fastq'
 ) -> dict[str, str]:
     """
-    Filters fastq sequences by gives parameters
+    Read and filter fastq sequences in a user-specified dierectory by given parameters
     Arguments:
-    seqs: dict 
+    input_fastq: str 
     gc_bounds: tuples / int / float
     length_bounds: tuples / int / float
     quality_threshold: int
-    Returns dict
+    Returns filtered fastq sequences in a user-specified directory. Saves results in the current directory by default 
     Raises the error in case reads are not correct nucleic acids
     """
-    for key in seqs:
-        if not is_nucleic_acid(key):
-            return 'Error: reads are not nucleic acids'
-    filtered_seqs = {}
+    if not os.path.exists('filtered'):
+        os.makedirs('filtered')
+    if os.path.exists('filtered/output_fastq'):
+        return 'Файл уже существует!'
+    
     if isinstance(length_bounds, (int, float)):
         len_left_bound, len_right_bound = (0, length_bounds)
     else:
-        len_left_bound, len_right_bound = length_bounds
-    for seq in seqs:
-        if is_in_bounds(seqs[seq][0], gc_bounds, 'G', 'C') and is_qualified(seqs[seq][1], quality_threshold) and len_left_bound <= len(seqs[seq][0]) <= len_right_bound:
-            filtered_seqs[seq] = seqs[seq]
-    return filtered_seqs
+        len_left_bound, len_right_bound = length_bounds    
+        
+    with open(os.path(input_fastq, 'r')) as raw_fastq, open(output_fastq, 'a'):
+        output_fastq.write(f"{input_fastq = }{{\n")
+        
+        full_info_sequence = {}
+        while raw_fastq.readline().split() != '':
+            name = raw_fastq.readline().split(':')[0]
+            sequence = raw_fastq.readline().split()
+            if not is_nucleic_acid(sequence):
+                return 'Error: reads are not nucleic acids'
+            raw_fastq.readline()
+            quality = raw_fastq.readline().split()
+            full_info_sequence[name] = tuple(sequence, quality)
+            if is_in_bounds(full_info_sequence[name][0], gc_bounds, 'G', 'C') and 
+                is_qualified(full_info_sequence[name][1], quality_threshold) and 
+                len_left_bound <= len(full_info_sequence[name][0]) <= len_right_bound:
+                output_fastq.write(f"'{name}': ('{sequence}', '{quality}')\n")
+                
+        output_fastq.write("}}")
+       
+    # for key in seqs:
+    #     if not is_nucleic_acid(key):
+    #         return 'Error: reads are not nucleic acids'
+    # filtered_seqs = {}
+    
+    # for seq in seqs:
+    #     if is_in_bounds(seqs[seq][0], gc_bounds, 'G', 'C') and is_qualified(seqs[seq][1], quality_threshold) and len_left_bound <= len(seqs[seq][0]) <= len_right_bound:
+    #         filtered_seqs[seq] = seqs[seq]
+    # return filtered_seqs
           
     

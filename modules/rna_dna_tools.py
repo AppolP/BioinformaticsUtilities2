@@ -1,3 +1,4 @@
+
 def is_nucleic_acid(sequences):
     sequences = set().union(*[s.lower() for s in sequences])
     return sequences.issubset(valid_RNA) or sequences.issubset(valid_DNA)
