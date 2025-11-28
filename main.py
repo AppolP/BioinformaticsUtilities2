@@ -1,6 +1,7 @@
 from modules.rna_dna_tools import is_nucleic_acid, transcribe, reverse, complement, reverse_complement
 from modules.filter import is_in_bounds, is_qualified
 from typing import Union
+import os
 
 complement_rna: dict
 complement_rna = {
@@ -109,7 +110,7 @@ def filter_fastq(
         len_left_bound, len_right_bound = length_bounds    
         
     with open(input_fastq, 'r') as raw_fastq, open(output_fastq, 'w'):
-        output_fastq.write(f"{input_fastq = }{{\n")
+        output_fastq.write(f"{input_fastq = }{'\n'}")
         
         skip_comma = True
         while raw_fastq.readline().strip() != '':
@@ -121,9 +122,9 @@ def filter_fastq(
             if not is_nucleic_acid(sequence):
                 return 'Error: reads are not nucleic acids'
             name = name_line[1:] if name_line.startswith('@') else name_line
-            if is_in_bounds(sequence, gc_bounds, 'G', 'C') and 
+            if (is_in_bounds(sequence, gc_bounds, 'G', 'C') and 
                 is_qualified(quality, quality_threshold) and 
-                len_left_bound <= len(sequence) <= len_right_bound:
+                len_left_bound <= len(sequence) <= len_right_bound):
                 if not skip_comma:
                     output_fastq.write(',\n')
                 output_fastq.write(f"'{name}': ('{sequence}', '{quality}')")

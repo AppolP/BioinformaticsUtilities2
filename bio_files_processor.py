@@ -28,7 +28,9 @@ def convert_multiline_fasta_to_oneline(input_fasta: str, output_fasta: str) -> N
                     if sequence_line.startswith('>') or not sequence_line:
                         flag = False
                 multiline_fasta.write(f'{"".join(multiline_sequences)}\n')
-            read_line = raw_fasta.readline().strip()
+                read_line = sequence_line 
+            else:
+                read_line = raw_fasta.readline().strip()
 
 
 def parse_blast_output(input_file: str, output_file: str) -> None:
@@ -42,14 +44,14 @@ def parse_blast_output(input_file: str, output_file: str) -> None:
     """
     
     with open(input_file, 'r') as infile, open(output_file, 'w') as res_file:
-    line = infile.readline()
-    proteins = []
-    while line:
-        if line.startswith('Description'):
-            line = infile.readline().rstrip()
-            proteins.append(line[:66])
         line = infile.readline()
-    res_file.write('\n'.join(sorted(proteins)))    
+        proteins = []
+        while line:
+            if line.startswith('Description'):
+                line = infile.readline().rstrip()
+                proteins.append(line[:66])
+            line = infile.readline()
+        res_file.write('\n'.join(sorted(proteins)))    
 
 
 def select_genes_from_gbk_to_fasta():
