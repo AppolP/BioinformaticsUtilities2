@@ -14,7 +14,7 @@ def convert_multiline_fasta_to_oneline(input_fasta: str, output_fasta: str) -> N
     with open(input_fasta, 'r') as raw_fasta, open(output_fasta, 'w') as multiline_fasta:
         read_line = raw_fasta.readline().strip()
         if not read_line.startswith('>'):
-            return 'У прочтений нет названий'
+            return 'Reads have no name'
         
         while read_line:
             if read_line.startswith('>'):

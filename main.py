@@ -102,7 +102,7 @@ def filter_fastq(
     if not os.path.exists('filtered'):
         os.makedirs('filtered')
     if os.path.exists('filtered/output_fastq'):
-        return 'Файл уже существует!'
+        return 'File already exists!'
     
     if isinstance(length_bounds, (int, float)):
         len_left_bound, len_right_bound = (0, length_bounds)
