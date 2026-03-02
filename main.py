@@ -1,40 +1,14 @@
-from modules.rna_dna_tools import (
-    is_nucleic_acid,
-    transcribe,
-    reverse,
-    complement,
-    reverse_complement,
-)
 from modules.filter import is_in_bounds, is_qualified
 from typing import Union
 import os
 
-complement_rna: dict
-complement_rna = {
-    "a": "u",
-    "A": "U",
-    "u": "a",
-    "U": "A",
-    "g": "c",
-    "G": "C",
-    "c": "g",
-    "C": "G",
-}
-complement_dna: dict
-complement_dna = {
-    "a": "t",
-    "A": "T",
-    "t": "a",
-    "T": "A",
-    "g": "c",
-    "G": "C",
-    "c": "g",
-    "C": "G",
-}
+
 valid_rna: dict
 valid_rna = {"a", "u", "g", "c", "A", "U", "G", "C"}
+
 valid_dna: dict
 valid_dna = {"a", "t", "g", "c", "A", "T", "G", "C"}
+
 transcribed_dna: dict
 transcribed_dna = {
     "a": "a",
@@ -47,6 +21,137 @@ transcribed_dna = {
     "C": "C",
 }
 
+complement_rna: dict
+complement_rna = {
+    "a": "u",
+    "A": "U",
+    "u": "a",
+    "U": "A",
+    "g": "c",
+    "G": "C",
+    "c": "g",
+    "C": "G",
+}
+
+complement_dna: dict
+complement_dna = {
+    "a": "t",
+    "A": "T",
+    "t": "a",
+    "T": "A",
+    "g": "c",
+    "G": "C",
+    "c": "g",
+    "C": "G",
+}
+
+
+def is_nucleic_acid(sequences: Union[str, list]) -> bool:
+    """
+    Сhecks whether the sequence contains only nucleic acids
+
+    Arguments:
+    sequence: str, list, sequence to process
+
+    Returns True or False
+    """
+
+    sequences = set().union(*[s.lower() for s in sequences])
+    return sequences.issubset(valid_rna) or sequences.issubset(valid_dna)
+
+
+def transcribe(sequences: Union[str, list]) -> list:
+    """
+    Exchanges T (thymin) with U (uracil) the corresponding amino acid in the RNA
+
+    Arguments:
+    sequence: str, list, sequence or sequences to process
+
+    Returns list with transcribed sequence or sequences
+    """
+
+    return [
+        "".join([transcribed_dna[nucleotide] for nucleotide in seq])
+        for seq in sequences
+    ]
+
+
+def reverse(sequences: Union[str, list]) -> list:
+    """
+    Reads the sequence backwards
+
+    Arguments:
+    sequence: str, list, sequence or sequences to process
+
+    Returns list with reversed sequence or sequences
+    """
+
+    reversed_sequences = [seq[::-1] for seq in sequences]
+    return reversed_sequences
+
+
+def complement(sequences: Union[str, list]) -> list:
+    """
+    Exchanges each nucleic acid with its complemented pair
+
+    Arguments:
+    sequence: str, list, sequence or sequences to process
+
+    Returns list with complemented sequence or sequences
+    """
+
+    if sequences.issubset(valid_rna):
+        complement_sequences = [
+            "".join([complement_rna[nb] for nb in seq]) for seq in sequences
+        ]
+    elif sequences.issubset(valid_dna):
+        complement_sequences = [
+            "".join([complement_dna[nb] for nb in seq]) for seq in sequences
+        ]
+    return complement_sequences
+
+
+def reverse_complement(sequences: Union[str, list]) -> list:
+    """
+    Exchanges each nucleic acid with its complemented pair and reads it backwards
+
+    Arguments:
+    sequence: str, list, sequence or sequences to process
+
+    Returns list with complemented and turned in the opposite direction sequence or sequences
+    """
+
+    return reverse(complement(sequences))
+
+def is_in_bounds(sequence: str, range: Union[tuple[int, int], int, float], *args: str) -> bool:
+    '''
+    Check if sequence length is in given bounds
+    
+    Arguments:
+    sequence: str, sequence to process
+    range: tuple, int or float, a range the sequence belongs to or a value the sequence is below 
+    args: str, substrings to be counted and matched to the specified range
+    '''
+    if isinstance(range, (int, float)):
+        low_bound, upper_bound = 0, range
+    else:
+        low_bound, upper_bound = range
+    args_count = 0
+    for arg in args:
+        args_count += sequence.count(arg)  
+    args_percentage = args_count/len(sequence)*100
+    return low_bound <= args_percentage <= upper_bound
+
+def is_qualified(seq_quality: str, quality_threshold: int) -> bool:
+    '''
+    Check if sequence quality under the given threshold
+    
+    Arguments: 
+    seq_quality: str, quality sequence of the read sequence 
+    quality_threshold: int, the value bordering acceptable quality value
+    '''
+    q_score = sum([ord(el)-33 for el in seq_quality])  
+    return 10**(-q_score/10) >= quality_threshold
 
 def run_dna_rna_tools(*args: str) -> Union[str, list[str]]:
     """
