@@ -1,45 +1,84 @@
 # Bioinformatics Utilities
 
-A comprehensive Python package for molecular biology and genetic data analysis, providing essential tools for sequence manipulation, reading bioinformatic files and FASTQ filtering. The manipulation of biological objects in the code is provided through a class system that facilitates the handling and creation of nucleic acid sequences.
-
-## 🔍 FASTQ Filter
-
-### `filter_fastq()`
-
-Filters sequencing reads based on user-defined quality metrics and criteria.
-
-#### Input Format
-
-```python
-{'read_name': ('sequence_string', 'quality_string'),
- 'read_1': ('ATCGATCG', 'IIIIIIII'),
- 'read_2': ('GCTAGCTA', 'JJJJJJJJ')}
-```
-#### Filtering Parameters
-
-|Parameter|Type|Default|Description|
-|---|---|---|---|
-|**`measure_gc`**|`float` (0-100)|`100`|GC content percentage threshold|
-|**`measure_quality`**|`int` (Phred score)|`0`|Minimum quality score threshold|
-|**`length_bounds`**|`tuple` (min, max)|All reads|Length-based filtering range|
-
-#### Key Metrics
-
-- **GC Content**: Ratio of G and C nucleotides to total sequence length
-    
-- **Quality Scores**: Phred quality score interpretation
-    
-- **Length Filtering**: Flexible range-based selection
-    
-
-#### Dependencies
-
-- Requires `Biopython` package
-
+A comprehensive Python package for molecular biology and genetic data analysis, providing essential tools for sequence manipulation, reading bioinformatic files and FASTQ filtering.  
+**All biological sequences are now implemented as classes** (`DNASequence`, `RNASequence`, `AminoAcidSequence`) with built-in methods for reverse complement, transcription, translation, and validity checks.  
+The FASTQ filter has been rewritten to use **Biopython** for robust and efficient processing.
 
 ---
 
-## 📁 FASTA File Processor
+## Sequence Classes
+
+The package provides object‑oriented wrappers for DNA, RNA, and amino acid sequences.
+
+| Class | Description | Key Methods |
+|-------|-------------|-------------|
+| `DNASequence(sequence: str)` | DNA sequence (letters A,T,G,C) | `complement()`, `reverse()`, `reverse_complement()`, `transcribe()` |
+| `RNASequence(sequence: str)` | RNA sequence (letters A,U,G,C) | `complement()`, `reverse()`, `reverse_complement()` |
+| `AminoAcidSequence(sequence: str)` | Protein sequence (one‑letter code) | `protein_synthesis()` (translates RNA into protein), `is_correct()` |
+
+All classes inherit from `BiologicalSequence` and support:
+- `len()` – length of the sequence
+- indexing and slicing (`seq[2]`, `seq[1:5]`)
+- `str(seq)` – returns the raw sequence string
+- `is_correct()` – checks if all characters belong to the allowed alphabet
+
+### Example usage
+
+```python
+
+dna = DNASequence("ATGGCC")
+print(dna.reverse_complement())          # GGCCAT
+print(dna.transcribe())                   # AUGGCC
+
+rna = RNASequence("AUGGCC")
+print(rna.complement())                    # UACCGG
+print(rna.reverse())                        # CCGGUA
+
+protein = AminoAcidSequence("MVLSPADKT")
+print(protein.is_correct())                 # True
+```
+
+---
+
+## FASTQ Filter
+
+### `filter_fastq()`
+
+Filters sequencing reads from a FASTQ file using GC content, length, and average quality thresholds. **Now powered by Biopython** for reliable parsing and writing.
+
+#### Input
+
+- Path to a FASTQ file (plain or gzipped).
+
+#### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| **`gc_bounds`** | `tuple(min, max)` or `int/float` | `(0, 100)` | Allowed GC content range (percentage). If a single number is given, it is treated as the upper bound (0–value). |
+| **`length_bounds`** | `tuple(min, max)` or `int/float` | `(0, 2**32)` | Allowed sequence length range. If a single number is given, it becomes the upper bound (0–value). |
+| **`quality_threshold`** | `int` | `0` | Minimum average Phred quality score required. |
+| **`output_fastq`** | `str` | `"filtered/filtered_fastq.fastq"` | Path where filtered reads will be saved. The directory is created automatically if missing. |
+
+#### Returns
+
+- `None` – writes filtered reads directly to the output file.
+
+#### Example
+
+```python
+
+filter_fastq(
+    input_fastq="raw_reads.fastq",
+    gc_bounds=(30, 70),
+    length_bounds=(100, 500),
+    quality_threshold=20,
+    output_fastq="filtered/high_quality.fastq"
+)
+```
+
+---
+
+## FASTA File Processor
 
 ### `convert_multiline_fasta_to_oneline()`
 
@@ -54,34 +93,31 @@ Converts multi-line FASTA files to single-line sequence format. Essential for do
 
 #### Features
 
-- 🧬 Supports DNA, RNA, and protein sequences
-    
-- 🔄 Converts multi-line sequences to single-line format
-    
-- ⚡ Optional output file parameter
-    
-- 🛡️ Automatic validation of FASTA format
-    
-- 💾 Creates clean, analysis-ready FASTA files
-    
+- Supports DNA, RNA, and protein sequences
+- Converts multi-line sequences to single-line format
+- Optional output file parameter (if omitted, the input file is overwritten)
+- Automatic validation of FASTA format
+- Creates clean, analysis-ready FASTA files
 
 #### Example
 
-python
+```python
+from bio_files_processor import convert_multiline_fasta_to_oneline
 
-# Basic usage
-convert_multiline_fasta_to_oneline("input.fasta", "output.fasta")
+# Without output file (modifies input file in place)
+convert_multiline_fasta_to_oneline("multiline.fasta")
 
-# Without output file (creates modified input file)
-convert_multiline_fasta_to_oneline("sequences.fasta")
-
+# With explicit output
+convert_multiline_fasta_to_oneline("multiline.fasta", "oneline.fasta")
+```
+bio_files_processor
 ---
 
-## 🔬 BLAST Results Parser
+## BLAST Results Parser
 
 ### `parse_blast_output()`
 
-Extracts and processes BLAST analysis results to identify best matches for antibiotic resistance gene analysis in _E. coli_.
+Extracts and processes BLAST analysis results to identify best matches for antibiotic resistance gene analysis in *E. coli*.
 
 #### Parameters
 
@@ -92,149 +128,82 @@ Extracts and processes BLAST analysis results to identify best matches for antib
 
 #### Functionality
 
-- 📊 Parses BLAST txt output files
-    
-- 🔍 Extracts best matches from "Sequences producing significant alignments" sections
-    
-- 📝 Retrieves first entry from Description column for each QUERY
-    
-- 📋 Saves alphabetically sorted protein names in single-column format
-    
+- Parses BLAST txt output files
+- Extracts best matches from "Sequences producing significant alignments" sections
+- Retrieves first entry from Description column for each QUERY
+- Saves alphabetically sorted protein names in single-column format
 
-#### Use Case
+#### Example
 
-- **Antibiotic Resistance Analysis**: Identify flanking genes around antibiotic resistance genes in pathogenic _E. coli_
-    
-- **High-Throughput Processing**: Handles multiple sequence queries in single BLAST run
-    
-- **Data Organization**: Creates clean, sorted output for further analysis
-    
+```python
+from bio_files_processor import parse_blast_output
 
-#### Example Input
-
-text
-
-QUERY: gene_flanking_1
-Sequences producing significant alignments:
-Description          Score    E-value
-Protein_A            250      1e-65
-Protein_B            200      1e-50
-
-QUERY: gene_flanking_2  
-Description          Score    E-value
-Protein_C            300      1e-80
+parse_blast_output("blast_results.txt", "best_matches.txt")
+```
 
 ---
 
-## 🧫 GBK Gene Extractor
+## Quick Start
 
-### `select_genes_from_gbk_to_fasta()`
+```python
 
-Extracts protein sequences of genes flanking target genes of interest from GenBank files for BLAST analysis.
+# --- Sequence manipulation ---
+dna = DNASequence("ATGGCC")
+print(dna.reverse_complement())          # GGCCAT
+print(dna.transcribe())                   # AUGGCC
 
-#### Parameters
+rna = RNASequence("AUGGCC")
+print(rna.complement())                    # UACCGG
 
-|Parameter|Type|Default|Description|
-|---|---|---|---|
-|**`input_gbk`**|`str`|-|Path to input GBK file|
-|**`genes`**|`str` or `list`|-|Target gene(s) of interest|
-|**`n_before`**|`int`|`1`|Number of genes to extract before target|
-|**`n_after`**|`int`|`1`|Number of genes to extract after target|
-|**`output_fasta`**|`str`|-|Output FASTA file path|
-
-#### Features
-
-- 🧬 Extracts protein translations from GBK annotations
-    
-- 📍 Identifies flanking genes relative to target genes
-    
-- 🚫 Excludes target genes themselves from output
-    
-- 🎯 Configurable flanking region size
-    
-- 🧪 Designed for antibiotic resistance mechanism analysis
-    
-
-#### Workflow
-
-1. **Input**: GBK file with _E. coli_ genome annotation
-    
-2. **Processing**: Locates target genes and extracts n neighboring genes
-    
-3. **Output**: FASTA file with protein sequences ready for BLAST
-    
-
-#### Example Usage
-
-python
-
-# Extract 2 genes before and 1 gene after antibiotic resistance genes
-select_genes_from_gbk_to_fasta(
-    input_gbk="ecoli_annotation.gbk",
-    genes=["blaTEM", "tetA"],
-    n_before=2,
-    n_after=1,
-    output_fasta="flanking_genes.fasta"
+# --- FASTQ filtering ---
+filter_fastq(
+    input_fastq="raw.fastq",
+    gc_bounds=50,
+    length_bounds=(100, 300),
+    quality_threshold=25,
+    output_fastq="filtered/pass.fastq"
 )
 
----
-
-## 🚀 Quick Start
-
-python
-
-from bioinformatics_utils import (
-    filter_fastq,
-    convert_multiline_fasta_to_oneline,
-    parse_blast_output,
-    select_genes_from_gbk_to_fasta
-)
-
-# Sequence transformation
-result = run_dna_rna_tools(sequences, operation='reverse_complement')
-
-# FASTQ filtering
-filtered_reads = filter_fastq(
-    reads_dict, 
-    measure_gc=40.0,
-    measure_quality=20,
-    length_bounds=(50, 150)
-)
-
-# FASTA format conversion
+# --- FASTA conversion ---
 convert_multiline_fasta_to_oneline("multiline.fasta", "oneline.fasta")
 
-# BLAST results analysis
-parse_blast_output("blast_results.txt", "best_matches.txt")
+# --- BLAST parsing ---
+parse_blast_output("blast.txt", "best_hits.txt")
 
-# Extract flanking genes for resistance analysis
-select_genes_from_gbk_to_fasta(
-    "ecoli.gbk",
-    genes=["resistance_gene"],
-    n_before=2,
-    n_after=2,
-    output_fasta="flanking_sequences.fasta"
-)
+```
 
 ---
 
-## 💡 Use Cases
+## Dependencies
 
-- **Sequence Analysis**: Transform and validate DNA/RNA sequences
-    
-- **Quality Control**: Filter low-quality sequencing reads
-    
-- **Data Preprocessing**: Prepare FASTA files for analysis
-    
-- **Antibiotic Resistance Research**: Analyze flanking genes in pathogenic bacteria
-    
-- **Genome Annotation Processing**: Extract specific gene regions from GBK files
-    
-- **BLAST Pipeline**: Process and analyze BLAST search results
-    
-- **Educational Tools**: Teach bioinformatics concepts and workflows
-    
+- **Python** ≥ 3.7
+- **Biopython** (for FASTQ filtering)
+
+All other modules are part of the Python standard library.
+
+To install the required package:
+
+```bash
+pip install biopython
+```
+
+Or use the provided `requirements.txt`:
+
+```
+biopython
+```
 
 ---
 
-_Designed for bioinformaticians and molecular biologists working with genetic sequence data, antibiotic resistance research, and genomic analysis._
+## Use Cases
+
+- **Sequence Analysis**: Transform and validate DNA/RNA sequences using an intuitive class‑based interface.
+- **Quality Control**: Filter low‑quality sequencing reads with flexible GC, length, and quality criteria.
+- **Data Preprocessing**: Prepare FASTA files for analysis (multi‑line → single‑line).
+- **Antibiotic Resistance Research**: Analyze flanking genes in pathogenic bacteria using GenBank files.
+- **BLAST Pipeline**: Process and extract best matches from BLAST search results.
+- **Educational Tools**: Teach bioinformatics concepts and workflows.
+
+---
+
+*Designed for bioinformaticians and molecular biologists working with genetic sequence data, antibiotic resistance research, and genomic analysis.*
