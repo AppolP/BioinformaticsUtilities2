@@ -1,44 +1,6 @@
 # Bioinformatics Utilities
 
-A comprehensive Python package for molecular biology and genetic data analysis, providing essential tools for sequence manipulation, reading bioinformatic filed and FASTQ filtering.
-
-## 🧬 DNA/RNA Sequence Tools
-
-### `run_dna_rna_tools()`
-
-Processes DNA and RNA sequences with multiple transformation options. Automatically validates nucleotide composition for all operations.
-
-#### Input
-
-- DNA or RNA sequences with specified transformation type
-
-#### Available Operations
-
-|Operation|Description|
-|---|---|
-|**`is_nucleic_acid`**|Validates nucleotide composition of sequences|
-|**`transcribe`**|Converts DNA sequences to RNA (T → U)|
-|**`reverse`**|Reverses sequence direction (5' → 3')|
-|**`complement`**|Generates complementary sequences|
-|**`reverse_complement`**|Creates reverse complementary sequences|
-
-#### Features
-
-- ✅ Automatic nucleotide validation
-    
-- ✅ Support for both DNA and RNA sequences
-    
-- ✅ Comprehensive error handling
-    
-- ✅ Batch processing capabilities
-    
-
-#### Dependencies
-
-- Requires `modules.py` package
-    
-
----
+A comprehensive Python package for molecular biology and genetic data analysis, providing essential tools for sequence manipulation, reading bioinformatic files and FASTQ filtering. The manipulation of biological objects in the code is provided through a class system that facilitates the handling and creation of nucleic acid sequences.
 
 ## 🔍 FASTQ Filter
 
@@ -72,7 +34,7 @@ Filters sequencing reads based on user-defined quality metrics and criteria.
 
 #### Dependencies
 
-- Requires `filter.py` package
+- Requires `Biopython` package
 
 
 ---
@@ -222,7 +184,6 @@ select_genes_from_gbk_to_fasta(
 python
 
 from bioinformatics_utils import (
-    run_dna_rna_tools, 
     filter_fastq,
     convert_multiline_fasta_to_oneline,
     parse_blast_output,

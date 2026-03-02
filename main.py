@@ -1,192 +1,158 @@
-from modules.filter import is_in_bounds, is_qualified
-from typing import Union
 import os
 
-
-valid_rna: dict
-valid_rna = {"a", "u", "g", "c", "A", "U", "G", "C"}
-
-valid_dna: dict
-valid_dna = {"a", "t", "g", "c", "A", "T", "G", "C"}
-
-transcribed_dna: dict
-transcribed_dna = {
-    "a": "a",
-    "A": "A",
-    "t": "u",
-    "T": "U",
-    "g": "g",
-    "G": "G",
-    "c": "c",
-    "C": "C",
-}
-
-complement_rna: dict
-complement_rna = {
-    "a": "u",
-    "A": "U",
-    "u": "a",
-    "U": "A",
-    "g": "c",
-    "G": "C",
-    "c": "g",
-    "C": "G",
-}
-
-complement_dna: dict
-complement_dna = {
-    "a": "t",
-    "A": "T",
-    "t": "a",
-    "T": "A",
-    "g": "c",
-    "G": "C",
-    "c": "g",
-    "C": "G",
-}
+from typing import Union
+from abc import ABC, abstractmethod
+from Bio import SeqIO
+from Bio.SeqUtils import gc_fraction
 
 
-def is_nucleic_acid(sequences: Union[str, list]) -> bool:
-    """
-    Сhecks whether the sequence contains only nucleic acids
+class BiologicalSequence(ABC):
+    valid_rna: set
+    valid_rna = {"a", "u", "g", "c", "A", "U", "G", "C"}
 
-    Arguments:
-    sequence: str, list, sequence to process
+    valid_dna: set
+    valid_dna = {"a", "t", "g", "c", "A", "T", "G", "C"}
 
-    Returns True or False
-    """
+    def __init__(self, sequence: str):
+        self.sequence = sequence
 
-    sequences = set().union(*[s.lower() for s in sequences])
-    return sequences.issubset(valid_rna) or sequences.issubset(valid_dna)
-
-
-def transcribe(sequences: Union[str, list]) -> list:
-    """
-    Exchanges T (thymin) with U (uracil) the corresponding amino acid in the RNA
-
-    Arguments:
-    sequence: str, list, sequence or sequences to process
-
-    Returns list with transcribed sequence or sequences
-    """
-
-    return [
-        "".join([transcribed_dna[nucleotide] for nucleotide in seq])
-        for seq in sequences
-    ]
-
-
-def reverse(sequences: Union[str, list]) -> list:
-    """
-    Reads the sequence backwards
-
-    Arguments:
-    sequence: str, list, sequence or sequences to process
-
-    Returns list with reversed sequence or sequences
-    """
-
-    reversed_sequences = [seq[::-1] for seq in sequences]
-    return reversed_sequences
-
-
-def complement(sequences: Union[str, list]) -> list:
-    """
-    Exchanges each nucleic acid with its complemented pair
-
-    Arguments:
-    sequence: str, list, sequence or sequences to process
-
-    Returns list with complemented sequence or sequences
-    """
-
-    if sequences.issubset(valid_rna):
-        complement_sequences = [
-            "".join([complement_rna[nb] for nb in seq]) for seq in sequences
-        ]
-    elif sequences.issubset(valid_dna):
-        complement_sequences = [
-            "".join([complement_dna[nb] for nb in seq]) for seq in sequences
-        ]
-    return complement_sequences
-
-
-def reverse_complement(sequences: Union[str, list]) -> list:
-    """
-    Exchanges each nucleic acid with its complemented pair and reads it backwards
-
-    Arguments:
-    sequence: str, list, sequence or sequences to process
-
-    Returns list with complemented and turned in the opposite direction sequence or sequences
-    """
-
-    return reverse(complement(sequences))
-
-def is_in_bounds(sequence: str, range: Union[tuple[int, int], int, float], *args: str) -> bool:
-    '''
-    Check if sequence length is in given bounds
+    def __len__(self):
+        return len(self.sequence)
     
-    Arguments:
-    sequence: str, sequence to process
-    range: tuple, int or float, a range the sequence belongs to or a value the sequence is below 
-    args: str, substrings to be counted and matched to the specified range
-    '''
-    if isinstance(range, (int, float)):
-        low_bound, upper_bound = 0, range
-    else:
-        low_bound, upper_bound = range
-    args_count = 0
-    for arg in args:
-        args_count += sequence.count(arg)  
-    args_percentage = args_count/len(sequence)*100
-    return low_bound <= args_percentage <= upper_bound
-
-def is_qualified(seq_quality: str, quality_threshold: int) -> bool:
-    '''
-    Check if sequence quality under the given threshold
+    def __getitem__(self, index: Union[int, slice]):
+            if isinstance(index, slice): 
+                start, stop, step = index.start, index.stop, index.step
+                return self.sequence[start:stop:step]
+            else :
+                return self.sequence[index]
+        
+    def __str__(self):
+        return self.sequence
     
-    Arguments: 
-    seq_quality: str, quality sequence of the read sequence 
-    quality_threshold: int, the value bordering acceptable quality value
-    '''
-    q_score = sum([ord(el)-33 for el in seq_quality])  
-    return 10**(-q_score/10) >= quality_threshold
+    def is_correct(self):
+        sequence_set = {c.lower() for c in self.sequence}
+        return sequence_set.issubset(self.valid_rna) or sequence_set.issubset(self.valid_dna)
 
-def run_dna_rna_tools(*args: str) -> Union[str, list[str]]:
-    """
-    Processes rna or dna according to given order by last string in agrs
 
-    Arguments:
-    args[:-1]: str, sequences to process
-    agrs[-1]: str, what to do with a sequence
-    Returns str in case of a single sequence or list in case of 2 and more sequences
-    Possuble args[-1]:
-    is_nucleic_acid - check for correct nucleic acid
-    transcribe - transform DNA to RNA
-    reverse - write the sequence in the opposite direction
-    complement - write complement sequence
-    reverse_complement - combine reverse and complement transformations
+class NucleicAcidSequence(BiologicalSequence):
+    def __init__(self, sequence: str):
+        super().__init__(sequence)
 
-    Raises an error in case of incorrect sequences
-    """
+    complement_library = {}
 
-    *sequences, action = args
-    available_functions = {
-        "is_nucleic_acid": is_nucleic_acid,
-        "transcribe": transcribe,
-        "reverse": reverse,
-        "complement": complement,
-        "reverse_complement": reverse_complement,
+    def complement(self):
+        if not self.complement_library:
+            raise NotImplementedError
+        return "".join([self.complement_library[nb] for nb in self.sequence])
+
+    def reverse(self):
+        return self.sequence[::-1]
+
+    def reverse_complement(self):
+        return self.complement()[::-1]
+    
+
+class DNASequence(NucleicAcidSequence):
+    complement_library: dict
+    complement_library = {
+        "a": "t",
+        "A": "T",
+        "t": "a",
+        "T": "A",
+        "g": "c",
+        "G": "C",
+        "c": "g",
+        "C": "G",
     }
-    flag = is_nucleic_acid(sequences)
-    if not flag:
-        return flag
-    answer = available_functions[action](sequences)
-    if len(answer) == 1:
-        return str(answer[0])
-    return answer
+    transcribed_dna: dict
+    transcribed_dna = {
+        "a": "a",
+        "A": "A",
+        "t": "u",
+        "T": "U",
+        "g": "g",
+        "G": "G",
+        "c": "c",
+        "C": "C",
+    }
 
+    def __init__(self, sequence: str):
+        super().__init__(sequence)
+    
+    def transcribe(self):
+        return "".join([self.transcribed_dna[nucleotide] for nucleotide in self.sequence])
+
+class RNASequence(NucleicAcidSequence):
+    complement_library: dict
+    complement_library = {
+        "a": "u",
+        "A": "U",
+        "u": "a",
+        "U": "A",
+        "g": "c",
+        "G": "C",
+        "c": "g",
+        "C": "G",
+    }
+
+    def __init__(self, sequence: str):
+        super().__init__(sequence)
+    
+
+
+class AminoAcidSequence(BiologicalSequence):
+    amino_table = {
+        'UUU': 'F', 'UUC': 'F',  
+        'UUA': 'L', 'UUG': 'L', 
+        'UCU': 'S', 'UCC': 'S', 'UCA': 'S', 'UCG': 'S',  
+        'UAU': 'Y', 'UAC': 'Y',  
+        'UAA': '*', 'UAG': '*',  
+        'UGU': 'C', 'UGC': 'C',  
+        'UGA': '*',              
+        'UGG': 'W',              
+        'CUU': 'L', 'CUC': 'L', 'CUA': 'L', 'CUG': 'L',  
+        'CCU': 'P', 'CCC': 'P', 'CCA': 'P', 'CCG': 'P',  
+        'CAU': 'H', 'CAC': 'H', 
+        'CAA': 'Q', 'CAG': 'Q',  
+        'CGU': 'R', 'CGC': 'R', 'CGA': 'R', 'CGG': 'R', 
+        'AUU': 'I', 'AUC': 'I', 'AUA': 'I',  
+        'AUG': 'M',            
+        'ACU': 'T', 'ACC': 'T', 'ACA': 'T', 'ACG': 'T',  
+        'AAU': 'N', 'AAC': 'N',  
+        'AAA': 'K', 'AAG': 'K',  
+        'AGU': 'S', 'AGC': 'S',  
+        'AGA': 'R', 'AGG': 'R',  
+        'GUU': 'V', 'GUC': 'V', 'GUA': 'V', 'GUG': 'V',  
+        'GCU': 'A', 'GCC': 'A', 'GCA': 'A', 'GCG': 'A',  
+        'GAU': 'D', 'GAC': 'D', 
+        'GAA': 'E', 'GAG': 'E',  
+        'GGU': 'G', 'GGC': 'G', 'GGA': 'G', 'GGG': 'G'
+        }
+    
+    def is_correct(self):
+        if not self.sequence:
+            return False 
+        valid_amino = set(self.amino_table.values())
+        return all(ch.upper() in valid_amino for ch in self.sequence)
+    
+    def __init__(self, sequence: str):
+        super().__init__(sequence)
+
+    def protein_synthesis(self):
+        if not self.is_correct():
+            raise ValueError
+        rna = self.sequence.upper()
+        amino_sequence = []
+        if rna.is_correct():
+            for i in range(0, len(rna)-2, 3):
+                codon = rna[i:i+3]
+                if codon == '*':
+                    break
+                amino_sequence.append(self.amino_table[codon])
+            return amino_sequence
+        else:
+            raise NotImplementedError
+        
 
 def filter_fastq(
     input_fastq: str,
@@ -199,7 +165,7 @@ def filter_fastq(
     Read and filter fastq sequences in a user-specified dierectory by given parameters
 
     Arguments:
-    input_fastq: str
+    input_fastq: str / list 
     gc_bounds: tuples / int / float
     length_bounds: tuples / int / float
     quality_threshold: int
@@ -219,31 +185,36 @@ def filter_fastq(
     else:
         len_left_bound, len_right_bound = length_bounds
 
+    if isinstance(gc_bounds, (int, float)):
+        low_bound, upper_bound = 0, range
+    else:
+        low_bound, upper_bound = range
+
     with open(input_fastq, "r") as raw_fastq, open(output_fastq, "w") as output_fastq:
-        while True:
-            name_line = raw_fastq.readline().strip()
-            if not name_line:
-                break
 
-            sequence = raw_fastq.readline().strip()
-            plus_line = raw_fastq.readline().strip()
-            quality = raw_fastq.readline().strip()
+        sequences = SeqIO.parse(raw_fastq, "fastq")
+        filtered = []
 
-            if not name_line.startswith("@"):
+        for sequence in sequences:
+            seq = str(sequence.seq).upper()
+            if not len_left_bound <= len(sequence) <= len_right_bound:
                 continue
-            if not is_nucleic_acid(sequence):
-                print("Error: reads are not nucleic acids")
-                return None
 
-            name = name_line[1:]
+            gc_content = gc_fraction(seq) * 100
+            if not (low_bound <= gc_content <= upper_bound):
+                continue
+            
+            qualities = sequence.letter_annotations["phred_quality"]
+            if qualities:
+                mean_quality = sum(qualities) / len(qualities)
+                if mean_quality < quality_threshold:
+                    continue
+            elif quality_threshold > 0:
+                continue
 
-            if (
-                is_in_bounds(sequence, gc_bounds, "G", "C")
-                and (is_qualified(quality, quality_threshold))
-                and (len_left_bound <= len(sequence) <= len_right_bound)
-            ):
+            filtered.append(sequence)
+        
+        SeqIO.write(filtered, output_fastq, "fastq")
 
-                output_fastq.write(f"{name_line}\n")
-                output_fastq.write(f"{sequence}\n")
-                output_fastq.write(f"{plus_line}\n")
-                output_fastq.write(f"{quality}\n")
+
+
