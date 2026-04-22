@@ -7,11 +7,7 @@ from Bio.SeqUtils import gc_fraction
 
 
 class BiologicalSequence(ABC):
-    valid_rna: set
-    valid_rna = {"a", "u", "g", "c", "A", "U", "G", "C"}
 
-    valid_dna: set
-    valid_dna = {"a", "t", "g", "c", "A", "T", "G", "C"}
 
     def __init__(self, sequence: str):
         self.sequence = sequence
@@ -22,16 +18,16 @@ class BiologicalSequence(ABC):
     def __getitem__(self, index: Union[int, slice]):
             if isinstance(index, slice): 
                 start, stop, step = index.start, index.stop, index.step
-                return self.sequence[start:stop:step]
+                insequence = BiologicalSequence(self.sequence[start:stop:step])
+                return insequence
             else :
-                return self.sequence[index]
+                insequence = BiologicalSequence(self.sequence[index])
+                return insequence
         
     def __str__(self):
         return self.sequence
     
-    def is_correct(self):
-        sequence_set = {c.lower() for c in self.sequence}
-        return sequence_set.issubset(self.valid_rna) or sequence_set.issubset(self.valid_dna)
+
 
 
 class NucleicAcidSequence(BiologicalSequence):
@@ -39,17 +35,26 @@ class NucleicAcidSequence(BiologicalSequence):
         super().__init__(sequence)
 
     complement_library = {}
+    valid_rna: set
+    valid_rna = {"a", "u", "g", "c", "A", "U", "G", "C"}
+
+    valid_dna: set
+    valid_dna = {"a", "t", "g", "c", "A", "T", "G", "C"}
 
     def complement(self):
         if not self.complement_library:
             raise NotImplementedError
-        return "".join([self.complement_library[nb] for nb in self.sequence])
+        return NucleicAcidSequence("".join([self.complement_library[nb] for nb in self.sequence]))
 
     def reverse(self):
-        return self.sequence[::-1]
+        return NucleicAcidSequence(self.sequence[::-1])
 
     def reverse_complement(self):
-        return self.complement()[::-1]
+        return NucleicAcidSequence(self.complement()[::-1])
+    
+    def is_correct(self):
+        sequence_set = list(self.sequence)
+        return sequence_set.issubset(self.valid_rna) or sequence_set.issubset(self.valid_dna)
     
 
 class DNASequence(NucleicAcidSequence):
@@ -80,7 +85,7 @@ class DNASequence(NucleicAcidSequence):
         super().__init__(sequence)
     
     def transcribe(self):
-        return "".join([self.transcribed_dna[nucleotide] for nucleotide in self.sequence])
+        return RNASequence("".join([self.transcribed_dna[nucleotide] for nucleotide in self.sequence]))
 
 class RNASequence(NucleicAcidSequence):
     complement_library: dict
@@ -140,19 +145,21 @@ class AminoAcidSequence(BiologicalSequence):
 
     def protein_synthesis(self):
         if not self.is_correct():
-            raise ValueError
-        rna = self.sequence.upper()
-        amino_sequence = []
-        if rna.is_correct():
-            for i in range(0, len(rna)-2, 3):
-                codon = rna[i:i+3]
-                if codon == '*':
-                    break
-                amino_sequence.append(self.amino_table[codon])
-            return amino_sequence
-        else:
-            raise NotImplementedError
+            raise ValueError("Invalid amino acid sequence")
         
+        rna = RNASequence(self.sequence.upper())
+        if not rna.is_correct():
+            raise ValueError("Invalid RNA sequence")
+        
+        amino_sequence = []
+
+        for i in range(0, len(rna)-2, 3):
+            codon = rna[i:i+3]
+            if codon == '*':
+                break
+            amino_sequence.append(self.amino_table[codon])
+        return AminoAcidSequence(''.join(amino_sequence))
+
 
 def filter_fastq(
     input_fastq: str,
@@ -175,10 +182,8 @@ def filter_fastq(
     Raises the error in case reads are not correct nucleic acids
     """
 
-    if not os.path.exists("filtered"):
-        os.makedirs("filtered")
-    if os.path.exists("filtered/output_fastq"):
-        return "File already exists!"
+    if not os.path.exists(output_fastq):
+        os.makedirs(os.path.dirname(output_fastq))
 
     if isinstance(length_bounds, (int, float)):
         len_left_bound, len_right_bound = (0, length_bounds)
@@ -186,11 +191,14 @@ def filter_fastq(
         len_left_bound, len_right_bound = length_bounds
 
     if isinstance(gc_bounds, (int, float)):
-        low_bound, upper_bound = 0, range
+        low_bound, upper_bound = (0, gc_bounds)
     else:
-        low_bound, upper_bound = range
+        low_bound, upper_bound = gc_bounds
+    
+    output_file = output_fastq.split('/')[-1]
+    output_pw = output_fastq.split('/')[:-1]
 
-    with open(input_fastq, "r") as raw_fastq, open(output_fastq, "w") as output_fastq:
+    with open(input_fastq, "r") as raw_fastq, open("/".join(output_pw + [output_file]), "w") as output_fastq:
 
         sequences = SeqIO.parse(raw_fastq, "fastq")
         filtered = []
