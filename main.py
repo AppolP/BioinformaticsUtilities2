@@ -5,6 +5,13 @@ from abc import ABC, abstractmethod
 from Bio import SeqIO
 from Bio.SeqUtils import gc_fraction
 
+import argparse
+import logging
+logging.basicConfig(
+    filename='filter.log',
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
 
 class BiologicalSequence(ABC):
 
@@ -181,9 +188,18 @@ def filter_fastq(
     Returns filtered fastq sequences in a user-specified directory. Saves results in the current directory by default
     Raises the error in case reads are not correct nucleic acids
     """
-
-    if not os.path.exists(output_fastq):
-        os.makedirs(os.path.dirname(output_fastq))
+    if not logging.getLogger().hasHandlers():
+        logging.basicConfig(
+            filename='filter.log',
+            level=logging.INFO,
+            format='%(asctime)s - %(levelname)s - %(message)s'
+        )
+    logging.info(f"Filter started: {input_fastq} -> {output_fastq}")
+    
+    output_path = output_fastq 
+    dirname = os.path.dirname(output_path)
+    if dirname: 
+        os.makedirs(dirname, exist_ok=True)
 
     if isinstance(length_bounds, (int, float)):
         len_left_bound, len_right_bound = (0, length_bounds)
@@ -195,24 +211,35 @@ def filter_fastq(
     else:
         low_bound, upper_bound = gc_bounds
     
-    output_file = output_fastq.split('/')[-1]
-    output_pw = output_fastq.split('/')[:-1]
+    # if low_bound > upper_bound:
+    #     raise ValueError(f"GC lower bound {low_bound} cannot be greater than upper bound {upper_bound}")
+    # if len_left_bound > len_right_bound:
+    #     raise ValueError(f"Length lower bound {len_left_bound} cannot be greater than upper bound {len_right_bound}")
 
-    with open(input_fastq, "r") as raw_fastq, open("/".join(output_pw + [output_file]), "w") as output_fastq:
+    if not os.path.exists(input_fastq):
+        logging.error(f"Input file does not exist: {input_fastq}")
+        raise FileNotFoundError(f"File {input_fastq} does not exist")
+    
+    with open(input_fastq, "r") as raw_fastq, open(output_path, "w") as out:
 
         sequences = SeqIO.parse(raw_fastq, "fastq")
+        
+        total = 0
+            
         filtered = []
 
         for sequence in sequences:
+            total += 1
             seq = str(sequence.seq).upper()
             if not len_left_bound <= len(sequence) <= len_right_bound:
+                logging.warning(f"Sequence {sequence.id} did not pass length filter: {len(sequence)}")
                 continue
 
             gc_content = gc_fraction(seq) * 100
             if not (low_bound <= gc_content <= upper_bound):
                 continue
             
-            qualities = sequence.letter_annotations["phred_quality"]
+            qualities = sequence.letter_annotations.get("phred_quality", [])
             if qualities:
                 mean_quality = sum(qualities) / len(qualities)
                 if mean_quality < quality_threshold:
@@ -222,7 +249,33 @@ def filter_fastq(
 
             filtered.append(sequence)
         
-        SeqIO.write(filtered, output_fastq, "fastq")
+        SeqIO.write(filtered, out, "fastq")
+    
+    logging.info(f"Filtered {len(filtered)} sequences out of {total}")
 
 
+def main():
+    parser = argparse.ArgumentParser(description='Filter FASTQ sequences')
+    parser.add_argument('--input', '-i', required=True, help='Input FASTQ file')
+    parser.add_argument('--output', '-o', default='filtered/filtered_fastq.fastq', help='Output FASTQ file')
+    parser.add_argument('--gc_bounds', nargs=2, type=float, default=[0, 100], metavar=('LOW', 'HIGH'))
+    parser.add_argument('--length_bounds', nargs=2, type=int, default=[0, 2**32], metavar=('MIN', 'MAX'))
+    parser.add_argument('--quality', '-q', type=int, default=0, help='Min mean quality')
+    
+    args = parser.parse_args()
+    
+    gc_bounds = tuple(args.gc_bounds)
+    length_bounds = tuple(args.length_bounds)
+    
+    filter_fastq(
+        input_fastq=args.input,
+        output_fastq=args.output,
+        gc_bounds=gc_bounds,
+        length_bounds=length_bounds,
+        quality_threshold=args.quality
+    )
+
+if __name__ == '__main__':
+    main()
+    
 

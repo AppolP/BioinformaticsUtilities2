@@ -1,0 +1,8 @@
+README.md
+main.py
+pyproject.toml
+myfilter.egg-info/PKG-INFO
+myfilter.egg-info/SOURCES.txt
+myfilter.egg-info/dependency_links.txt
+myfilter.egg-info/top_level.txt
+tests/test_main.py
