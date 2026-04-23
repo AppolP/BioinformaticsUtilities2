@@ -1,0 +1,19 @@
+2026-04-23 21:39:40,460 - INFO - Filter started: /tmp/pytest-of-polina/pytest-17/test_filter_by_gc0/input.fastq -> /tmp/pytest-of-polina/pytest-17/test_filter_by_gc0/output.fastq
+2026-04-23 21:39:40,467 - INFO - Filtered 2 sequences out of 3
+2026-04-23 21:39:40,482 - INFO - Filter started: /tmp/pytest-of-polina/pytest-17/test_filter_by_length0/input.fastq -> /tmp/pytest-of-polina/pytest-17/test_filter_by_length0/output.fastq
+2026-04-23 21:39:40,487 - WARNING - Sequence long did not pass length filter: 40
+2026-04-23 21:39:40,488 - WARNING - Sequence short did not pass length filter: 4
+2026-04-23 21:39:40,489 - INFO - Filtered 1 sequences out of 3
+2026-04-23 21:39:40,502 - INFO - Filter started: /tmp/pytest-of-polina/pytest-17/test_quality_filter0/input.fastq -> /tmp/pytest-of-polina/pytest-17/test_quality_filter0/output.fastq
+2026-04-23 21:39:40,508 - INFO - Filtered 1 sequences out of 3
+2026-04-23 21:39:40,523 - INFO - Filter started: /tmp/pytest-of-polina/pytest-17/test_empty_input_file0/empty.fastq -> /tmp/pytest-of-polina/pytest-17/test_empty_input_file0/output.fastq
+2026-04-23 21:39:40,525 - INFO - Filtered 0 sequences out of 0
+2026-04-23 21:39:40,534 - INFO - Filter started: /tmp/pytest-of-polina/pytest-17/test_mkdir0/input.fastq -> /tmp/pytest-of-polina/pytest-17/test_mkdir0/output_dir/output.fastq
+2026-04-23 21:39:40,539 - INFO - Filtered 1 sequences out of 1
+2026-04-23 21:39:40,546 - INFO - Filter started: /tmp/pytest-of-polina/pytest-17/test_nonexistent_input_file0/nonexistent.fastq -> /tmp/pytest-of-polina/pytest-17/test_nonexistent_input_file0/output.fastq
+2026-04-23 21:39:40,547 - ERROR - Input file does not exist: /tmp/pytest-of-polina/pytest-17/test_nonexistent_input_file0/nonexistent.fastq
+2026-04-23 21:39:40,556 - INFO - Filter started: /tmp/pytest-of-polina/pytest-17/test_combination0/input.fastq -> /tmp/pytest-of-polina/pytest-17/test_combination0/output.fastq
+2026-04-23 21:39:40,562 - WARNING - Sequence low_gc_short_low_quality did not pass length filter: 4
+2026-04-23 21:39:40,563 - INFO - Filtered 1 sequences out of 3
+2026-04-23 21:39:40,574 - INFO - Filter started: /tmp/pytest-of-polina/pytest-17/test_invalid_gc_bounds0/input.fastq -> /tmp/pytest-of-polina/pytest-17/test_invalid_gc_bounds0/output.fastq
+2026-04-23 21:39:40,578 - INFO - Filtered 0 sequences out of 1

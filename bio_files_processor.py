@@ -56,4 +56,5 @@ def parse_blast_output(input_file: str, output_file: str) -> None:
 
 
 def select_genes_from_gbk_to_fasta():
-    return
+    ...
+    
